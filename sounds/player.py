@@ -16,7 +16,9 @@ class player(object):
         
         for i in xrange(len(self.outputs)):
             if genome[i] == '1':
-                self.outputs[i].play()        
+                self.outputs[i].play()
+
+        print genome        
     def add_sound(self,path):
         sound = sample(path)        
         self.outputs.append(sound)
