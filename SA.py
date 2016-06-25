@@ -4,8 +4,24 @@ import matplotlib.pyplot as plt
 import schematax as sx
 import time
 from sounds.player import player
+from liblo import *
+import sys
+import os
 def all_ones(indv):
     return indv.count('1')
+
+low = "./sounds/LOW FREQ"
+mid = "./sounds/MID FREQ"
+high = "./sounds/HIGH FREQ"
+
+
+low_sounds = [low + '/' + x for x in os.listdir(low)]
+mid_sounds = [mid + '/' + x for x in os.listdir(mid)]
+high_sounds = [high + '/' + x for x in os.listdir(high)]
+
+
+all_sounds = low_sounds + mid_sounds + high_sounds
+
 
 
 
@@ -35,7 +51,10 @@ class SA(object):
 
         self.func = func
         self.player = player()
-        self.player.add_sound('./sounds/100.mp3')
+        #self.player.add_sound('./sounds/100.mp3')
+        for sound in all_sounds:
+            self.player.add_sound(sound)
+
 
     def init_pop(self):
         self.pop = [''.join(str(random.choice(['1','0'])) for _ in xrange(self.p)) for _ in xrange(self.p) ]
@@ -57,15 +76,13 @@ class SA(object):
 
     def eval_pop(self):
         self.fs = {}
-        self.player.play('1')
-
-        time.sleep(6)
         bestp = ''
         bestpf = -float('inf')
         for indv in self.pop:
-            f = self.func(indv)
+            server.singal['mel']
+            self.player.play(indv)
             self.fs[indv] = f
-
+    
 
             if f > self.best_f:
                 self.best = indv
@@ -127,9 +144,112 @@ class SA(object):
             print self.best
 
 
+
+class MuseServer(ServerThread):
+    def __init__(self, port=4444):
+        self.signal = {}
+        self.signal['eeg'] = []
+        self.signal['alpha_rel'] = []
+        self.signal['conc'] = []
+        self.signal['mel'] = []
+        ServerThread.__init__(self, port)
+
+    # receive accelrometer data
+    @make_method('/muse/acc', 'fff')
+    def acc_callback(self, path, args):
+        acc_x, acc_y, acc_z = args
+        # print "%s %f %f %f" % (path, acc_x, acc_y, acc_z)
+
+    # receive EEG data
+    @make_method('/muse/eeg', 'ffff')
+    def eeg_callback(self, path, args):
+        self.signal['eeg'].append(args)
+
+        # receive alpha relative data
+    @make_method('/muse/elements/alpha_relative', 'ffff')
+    def alpha_callback(self, path, args):
+        self.signal['alpha_rel'].append(args)
+
+    # receive alpha relative data
+    @make_method('/muse/elements/experimental/concentration', 'f')
+    def concentration_callback(self, path, args):
+        self.signal['conc'].append(args[0])
+
+
+    # receive mellow data - viewer is the same as concentration
+    @make_method('/muse/elements/experimental/mellow', 'f')
+    def mellow_callback(self, path, args):
+        self.signal['mel'].append(args[0])
+    # handle unexpected messages
+    @make_method(None, None)
+    def fallback(self, path, args, types, src):
+        test = args
+        # print "Unknown message \n\t Source: '%s' \n\t Address: '%s' \n\t Types: '%s ' \n\t Payload: '%s'" %
+        # (src.url, path, types, args)
+
+
+
+
+
+
+
+
+
+
+
+
+try:
+    server = MuseServer()
+except ServerError, err:
+    print str(err)
+    sys.exit()
+server.start()
+
+import time
 if __name__ == "__main__":
-    g = SA(e=True) 
-    g.run()
-    plt.plot(g.av_f)
-    plt.show()
+   # io_udp = MuseIOOSC()
+   # io_udp.starit()
+    while True:
+        time.sleep(5)
+        print server.signal['conc']
+
+
+
+'''
+import argparse
+import math
+
+from pythonosc import dispatcher
+from pythonosc import osc_server
+
+
+def eeg_handler(unused_addr, args, ch1, ch2, ch3, ch4):
+    print("EEG (uV) per channel: ", ch1, ch2, ch3, ch4)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--ip",
+                        default="127.0.0.1",
+                        help="The ip to listen on")
+    parser.add_argument("--port",
+                        type=int,
+                        default=4444,
+                        help="The port to listen on")
+    args = parser.parse_args()
+
+    dispatcher = dispatcher.Dispatcher()
+    #dispatcher.map("/debug", print)
+    dispatcher.map("/muse/eeg", eeg_handler, "EEG")
+
+    server = osc_server.ThreadingOSCUDPServer(
+        (args.ip, args.port), dispatcher)
+    print("Serving on {}".format(server.server_address))
+    server.serve_forever()
+'''
+
+#if __name__ == "__main__":
+#    g = SA(e=True) 
+#    g.run()
+#    plt.plot(g.av_f)
+#    plt.show()
 
