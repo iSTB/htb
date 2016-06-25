@@ -10,15 +10,14 @@ import os
 def all_ones(indv):
     return indv.count('1')
 
-low = "./sounds/LOW FREQ"
-mid = "./sounds/MID FREQ"
-high = "./sounds/HIGH FREQ"
+low = "./sounds/HACK THE BRAIN SOUNDS/LOW"
+mid = "./sounds/HACK THE BRAIN SOUNDS/MID"
+high = "./sounds/HACK THE BRAIN SOUNDS/HIGH"
 
 
 low_sounds = [low + '/' + x for x in os.listdir(low)]
 mid_sounds = [mid + '/' + x for x in os.listdir(mid)]
 high_sounds = [high + '/' + x for x in os.listdir(high)]
-
 
 all_sounds = low_sounds + mid_sounds + high_sounds
 
@@ -58,12 +57,9 @@ class SA(object):
 
     def init_pop(self):
         self.pop = [''.join(str(random.choice(['1','0'])) for _ in xrange(self.p)) for _ in xrange(self.p) ]
-       
-
     
     def mutate(self,indv):
         return ''.join(str(int(not(int(x)))) if random.random() <= self.mu else x for x in indv)
-
 
     def crossover(self,ma,da):
         pivot = random.randint(0,self.p)
@@ -72,17 +68,23 @@ class SA(object):
         daught = da[:pivot] + ma[pivot:]
 
         return [son,daught]
-
-
+    
     def eval_pop(self):
+        import time
+        import numpy
         self.fs = {}
         bestp = ''
         bestpf = -float('inf')
         for indv in self.pop:
-            server.singal['mel']
             self.player.play(indv)
+            mel_old = server.signal['mel']
+            first = len(mel_old)
+            time.sleep(25)
+            mel_new = server.signal['mel']
+            f = numpy.mean(mel_new[first:])
+            print "calmness readings: " + str(mel_new[first:])
+            print "Fitness of genome, " + indv + " is: " + str(f)
             self.fs[indv] = f
-    
 
             if f > self.best_f:
                 self.best = indv
@@ -112,19 +114,11 @@ class SA(object):
         if self.s == 0:
             return self.roulette_wheel()
 
-
-    def get_good_schemata(self):
-        meanf = np.mean([s.fit for s in self.schemata])
-        meano = np.mean([s.get_order() for s in selfschemata])
-
-        self.good = [s for s in self.schemata if s.get_order() >= meano and s.fit >= meanfit]
-    
             
 
 
     def make_next_gen(self):
         self.eval_pop()
-        self.schemata = sx.complete(self.pop)
         new = []
         if self.e:
             new.append(self.bests[-1])
@@ -190,66 +184,20 @@ class MuseServer(ServerThread):
 
 
 
-
-
-
-
-
-
-
-
+#######Starting Server ################
 try:
     server = MuseServer()
 except ServerError, err:
     print str(err)
     sys.exit()
 server.start()
+print "MuseServer started on port 4444"
 
-import time
-if __name__ == "__main__":
-   # io_udp = MuseIOOSC()
-   # io_udp.starit()
-    while True:
-        time.sleep(5)
-        print server.signal['conc']
-
-
-
-'''
-import argparse
-import math
-
-from pythonosc import dispatcher
-from pythonosc import osc_server
-
-
-def eeg_handler(unused_addr, args, ch1, ch2, ch3, ch4):
-    print("EEG (uV) per channel: ", ch1, ch2, ch3, ch4)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--ip",
-                        default="127.0.0.1",
-                        help="The ip to listen on")
-    parser.add_argument("--port",
-                        type=int,
-                        default=4444,
-                        help="The port to listen on")
-    args = parser.parse_args()
-
-    dispatcher = dispatcher.Dispatcher()
-    #dispatcher.map("/debug", print)
-    dispatcher.map("/muse/eeg", eeg_handler, "EEG")
-
-    server = osc_server.ThreadingOSCUDPServer(
-        (args.ip, args.port), dispatcher)
-    print("Serving on {}".format(server.server_address))
-    server.serve_forever()
-'''
-
-#if __name__ == "__main__":
-#    g = SA(e=True) 
-#    g.run()
-#    plt.plot(g.av_f)
-#    plt.show()
+    bits = len(all_sounds)
+    g = SA(n=14,p=bits) 
+    g.run()
+    plt.plot(g.av_f)
+    plt.show()
 
